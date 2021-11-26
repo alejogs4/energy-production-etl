@@ -27,7 +27,6 @@ function loadStream(collection) {
     },
     async flush(cb) {
       try {
-        console.log(receivedRecords.length)
         const petitions = receivedRecords.map(record => insertEnergyInformationRecord(record, collection))
         await Promise.all(petitions)
         this.push(receivedRecords)
