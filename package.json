@@ -6,7 +6,8 @@
   "dependencies": {
     "csv-parse": "^5.0.3",
     "multipipe": "^4.0.0",
-    "pg": "^8.7.1"
+    "pg": "^8.7.1",
+    "promises-fn-utils": "^1.0.0"
   },
   "devDependencies": {},
   "scripts": {

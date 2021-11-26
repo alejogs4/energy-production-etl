@@ -13,10 +13,9 @@ const { parse } = require('csv-parse');
 const pipe = require('multipipe')
 const { mapToProductionInfo, filterAndGroup } = require('./transform');
 const { byKind, byKinds } = require('./predicates');
+const { loadStream } = require('./database/loadStreams');
 
 const pipelinePromise = promisify(pipeline)
-const csvParser = parse({ delimiter: ',' })
-
 // Constants
 const PRODUCTION_KINDS = ['From combustible fuels', 'Hydro', 'Solar', 'Wind']
 
@@ -28,21 +27,17 @@ const grossDemandRegistries = filterAndGroup(byKind('gross demand'));
 const grossProductionRegistries = filterAndGroup(byKind('gross production'));
 
 (async () => {
-  const extractEnergyInformation = transformStream => {
-    const csvMappingToProductionInfo = pipe(createReadStream('energy.csv'), csvParser, mapToProductionInfo());
-    return pipelinePromise(csvMappingToProductionInfo, transformStream)
+  const extractEnergyInformation = (transformStream, collection) => {
+    const csvParser = parse({ delimiter: ',' })
+    const loadCSVInformation = pipe(createReadStream('energy.csv'), csvParser, mapToProductionInfo());
+    return pipelinePromise(loadCSVInformation, transformStream, loadStream(collection))
   }
   
-
-  const energyImports = extractEnergyInformation(importsRegistries)
-  const energyExports = extractEnergyInformation(exportRegistries)
-  const grossDemand = extractEnergyInformation(grossDemandRegistries)
-  const grossProduction = extractEnergyInformation(grossProductionRegistries)
-  const productionKinds = extractEnergyInformation(productionKindsRegistries)
-
-  await energyImports
-  await energyExports
-  await grossDemand
-  await grossProduction
-  await productionKinds
+  await Promise.all([
+    extractEnergyInformation(importsRegistries, 'imports'),
+    extractEnergyInformation(exportRegistries, 'exports'),
+    extractEnergyInformation(grossDemandRegistries, 'totalconsumption'),
+    extractEnergyInformation(grossProductionRegistries, 'totalproduction'),
+    extractEnergyInformation(productionKindsRegistries, 'productionkinds')
+  ])
 })()

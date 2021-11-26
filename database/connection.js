@@ -1,3 +1,5 @@
 const { Pool } = require('pg')
 
-return new Pool({})
+module.exports = new Pool({
+  connectionString: process.env.CONNECTION_STREAM,
+})

@@ -14,7 +14,7 @@ function mapToProductionInfo() {
         country,
         kind,
         year: Number(year),
-        amount: Number(amount)
+        amount: Math.floor(Number(amount))
       }
 
       this.push(productionInfo)
@@ -34,7 +34,6 @@ function filterAndGroup(predicate) {
       cb()
     },
     flush(cb) {
-      console.log(results)
       this.push(results)
       cb()
     }
