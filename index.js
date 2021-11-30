@@ -6,16 +6,16 @@
  * - Total Production by year
  * - Total consumption by year
  */
-const { createReadStream } = require('fs')
+const { createReadStream, createWriteStream } = require('fs')
 const { promisify } = require('util')
-const { pipeline } = require('stream');
+const { pipeline: pipelineGenerator } = require('stream');
 const { parse } = require('csv-parse');
 const pipe = require('multipipe')
 const { mapToProductionInfo, filterAndGroup } = require('./transform');
 const { byKind, byKinds } = require('./predicates');
-const { loadStream } = require('./database/loadStreams');
+const { transformToCSV } = require('./persistance/loadStreams');
 
-const pipelinePromise = promisify(pipeline)
+const pipeline = promisify(pipelineGenerator)
 // Constants
 const PRODUCTION_KINDS = ['From combustible fuels', 'Hydro', 'Solar', 'Wind']
 
@@ -27,17 +27,18 @@ const grossDemandRegistries = filterAndGroup(byKind('gross demand'));
 const grossProductionRegistries = filterAndGroup(byKind('gross production'));
 
 (async () => {
-  const extractEnergyInformation = (transformStream, collection) => {
+  const extractEnergyInformation = (transformStream, csvOutput) => {
     const csvParser = parse({ delimiter: ',' })
     const loadCSVInformation = pipe(createReadStream('energy.csv'), csvParser, mapToProductionInfo());
-    return pipelinePromise(loadCSVInformation, transformStream, loadStream(collection))
+
+    return pipeline(loadCSVInformation, transformStream, transformToCSV(), createWriteStream(csvOutput))
   }
   
   await Promise.all([
-    extractEnergyInformation(importsRegistries, 'imports'),
-    extractEnergyInformation(exportRegistries, 'exports'),
-    extractEnergyInformation(grossDemandRegistries, 'totalconsumption'),
-    extractEnergyInformation(grossProductionRegistries, 'totalproduction'),
-    extractEnergyInformation(productionKindsRegistries, 'productionkinds')
+    extractEnergyInformation(importsRegistries, 'output/imports.csv'),
+    extractEnergyInformation(exportRegistries, 'output/exports.csv'),
+    extractEnergyInformation(grossDemandRegistries, 'output/totalconsumption.csv'),
+    extractEnergyInformation(grossProductionRegistries, 'output/totalproduction.csv'),
+    extractEnergyInformation(productionKindsRegistries, 'output/productionkinds.csv')
   ])
 })()
